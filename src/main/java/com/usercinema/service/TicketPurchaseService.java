@@ -1,7 +1,6 @@
 package com.usercinema.service;
 
 import com.usercinema.domain.Customer;
-import com.usercinema.domain.MembershipLevel;
 import com.usercinema.domain.Screening;
 import com.usercinema.domain.Seat;
 import com.usercinema.domain.Ticket;
@@ -21,12 +20,6 @@ import java.util.Set;
  */
 public final class TicketPurchaseService
 {
-    // 会员等级的累计消费和购票数量门槛。
-    private static final BigDecimal GOLD_SPENDING_THRESHOLD = new BigDecimal("1000.00");
-    private static final int GOLD_TICKET_THRESHOLD = 50;
-    private static final BigDecimal SILVER_SPENDING_THRESHOLD = new BigDecimal("300.00");
-    private static final int SILVER_TICKET_THRESHOLD = 20;
-
     private final InMemoryCinemaRepository repository;
     private final Random random;
 
@@ -80,7 +73,7 @@ public final class TicketPurchaseService
         List<Ticket> tickets = createTickets(customer, screening, selectedSeats, unitPrice);
 
         customer.recordPurchase(totalAmount, selectedSeats.size());
-        updateMembershipLevel(customer);
+        customer.updateMembershipLevel();
         return PurchaseResult.success(totalAmount, tickets);
     }
 
@@ -155,20 +148,6 @@ public final class TicketPurchaseService
             tickets.add(ticket);
         }
         return tickets;
-    }
-
-    private void updateMembershipLevel(Customer customer)
-    {
-        if (customer.getTotalSpent().compareTo(GOLD_SPENDING_THRESHOLD) >= 0
-                || customer.getTicketCount() >= GOLD_TICKET_THRESHOLD)
-        {
-            customer.changeMembershipLevel(MembershipLevel.GOLD);
-        }
-        else if (customer.getTotalSpent().compareTo(SILVER_SPENDING_THRESHOLD) >= 0
-                || customer.getTicketCount() >= SILVER_TICKET_THRESHOLD)
-        {
-            customer.changeMembershipLevel(MembershipLevel.SILVER);
-        }
     }
 
     private String generateElectronicId()
