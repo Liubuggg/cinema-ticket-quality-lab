@@ -73,30 +73,11 @@ public final class TicketPurchaseService
             return PurchaseResult.failure("支付密码不能为空");
         }
 
-        for (Seat seat : selectedSeats)
-        {
-            screening.getSeatMap().reserve(seat);
-        }
+        reserveSeats(screening, selectedSeats);
 
-        BigDecimal unitPrice = screening.getPrice()
-                .multiply(customer.getMembershipLevel().getDiscountRate())
-                .setScale(2, RoundingMode.HALF_UP);
+        BigDecimal unitPrice = calculateUnitPrice(screening, customer);
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(selectedSeats.size()));
-
-        List<Ticket> tickets = new ArrayList<>();
-        for (Seat seat : selectedSeats)
-        {
-            Ticket ticket = new Ticket(
-                    generateElectronicId(),
-                    customer.getId(),
-                    screening,
-                    seat,
-                    unitPrice,
-                    LocalDateTime.now());
-            screening.getSeatMap().markAsSold(seat);
-            repository.saveTicket(ticket);
-            tickets.add(ticket);
-        }
+        List<Ticket> tickets = createTickets(customer, screening, selectedSeats, unitPrice);
 
         customer.recordPurchase(totalAmount, selectedSeats.size());
         updateMembershipLevel(customer);
@@ -136,6 +117,44 @@ public final class TicketPurchaseService
     {
         Set<Seat> uniqueSeats = new HashSet<>(selectedSeats);
         return uniqueSeats.size() != selectedSeats.size();
+    }
+
+    /** 将本次选择的座位设为预留状态。 */
+    private void reserveSeats(Screening screening, List<Seat> selectedSeats)
+    {
+        for (Seat seat : selectedSeats)
+        {
+            screening.getSeatMap().reserve(seat);
+        }
+    }
+
+    /** 根据场次价格和会员折扣计算单张票价。 */
+    private BigDecimal calculateUnitPrice(Screening screening, Customer customer)
+    {
+        return screening.getPrice()
+                .multiply(customer.getMembershipLevel().getDiscountRate())
+                .setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /** 为选中的座位生成并保存电影票。 */
+    private List<Ticket> createTickets(Customer customer, Screening screening,
+                                       List<Seat> selectedSeats, BigDecimal unitPrice)
+    {
+        List<Ticket> tickets = new ArrayList<>();
+        for (Seat seat : selectedSeats)
+        {
+            Ticket ticket = new Ticket(
+                    generateElectronicId(),
+                    customer.getId(),
+                    screening,
+                    seat,
+                    unitPrice,
+                    LocalDateTime.now());
+            screening.getSeatMap().markAsSold(seat);
+            repository.saveTicket(ticket);
+            tickets.add(ticket);
+        }
+        return tickets;
     }
 
     private void updateMembershipLevel(Customer customer)
