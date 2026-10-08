@@ -96,12 +96,22 @@ class TicketPurchaseServiceTest
     @Test
     void shouldRejectUnavailableSeat()
     {
-        Seat unavailable = new Seat(1, 1);
+        Seat available = new Seat(1, 1);
+        Seat unavailable = new Seat(1, 2);
+        Customer customer = repository.findCustomer(1);
+        BigDecimal totalSpent = customer.getTotalSpent();
+        int ticketCount = customer.getTicketCount();
         mondayScreening().getSeatMap().reserve(unavailable);
 
-        PurchaseResult result = service.purchase(validRequest(List.of(unavailable)));
+        PurchaseResult result = service.purchase(
+                validRequest(List.of(available, unavailable)));
 
         assertFailure(result, "场次未开售、座位为空或座位已被占用");
+        assertEquals(SeatStatus.AVAILABLE,
+                mondayScreening().getSeatMap().getStatus(available));
+        assertTrue(repository.findTicketsByCustomer(1).isEmpty());
+        assertEquals(totalSpent, customer.getTotalSpent());
+        assertEquals(ticketCount, customer.getTicketCount());
     }
 
     @Test

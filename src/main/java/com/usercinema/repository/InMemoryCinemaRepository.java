@@ -109,6 +109,15 @@ public final class InMemoryCinemaRepository
         tickets.put(ticket.getElectronicId(), ticket);
     }
 
+    /** 保存一次购票生成的全部电影票。 */
+    public void saveTickets(List<Ticket> newTickets)
+    {
+        for (Ticket ticket : newTickets)
+        {
+            saveTicket(ticket);
+        }
+    }
+
     public Ticket findTicket(String electronicId)
     {
         return tickets.get(electronicId);

@@ -49,6 +49,22 @@ public final class SeatMap
         return true;
     }
 
+    /** 检查全部座位后统一设为售出状态。 */
+    public void sellSeats(List<Seat> selectedSeats)
+    {
+        for (Seat seat : selectedSeats)
+        {
+            if (!isAvailable(seat))
+            {
+                throw new IllegalStateException("座位不可出售: " + seat);
+            }
+        }
+        for (Seat seat : selectedSeats)
+        {
+            seats[toIndex(seat.getRow())][toIndex(seat.getColumn())] = SeatStatus.SOLD;
+        }
+    }
+
     /** 将可用座位设为预留状态。 */
     public void reserve(Seat seat)
     {

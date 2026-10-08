@@ -66,12 +66,12 @@ public final class TicketPurchaseService
             return PurchaseResult.failure("支付密码不能为空");
         }
 
-        reserveSeats(screening, selectedSeats);
-
         BigDecimal unitPrice = calculateUnitPrice(screening, customer);
         BigDecimal totalAmount = unitPrice.multiply(BigDecimal.valueOf(selectedSeats.size()));
         List<Ticket> tickets = createTickets(customer, screening, selectedSeats, unitPrice);
 
+        screening.getSeatMap().sellSeats(selectedSeats);
+        repository.saveTickets(tickets);
         customer.recordPurchase(totalAmount, selectedSeats.size());
         customer.updateMembershipLevel();
         return PurchaseResult.success(totalAmount, tickets);
@@ -112,15 +112,6 @@ public final class TicketPurchaseService
         return uniqueSeats.size() != selectedSeats.size();
     }
 
-    /** 将本次选择的座位设为预留状态。 */
-    private void reserveSeats(Screening screening, List<Seat> selectedSeats)
-    {
-        for (Seat seat : selectedSeats)
-        {
-            screening.getSeatMap().reserve(seat);
-        }
-    }
-
     /** 根据场次价格和会员折扣计算单张票价。 */
     private BigDecimal calculateUnitPrice(Screening screening, Customer customer)
     {
@@ -134,20 +125,32 @@ public final class TicketPurchaseService
                                        List<Seat> selectedSeats, BigDecimal unitPrice)
     {
         List<Ticket> tickets = new ArrayList<>();
+        Set<String> electronicIds = new HashSet<>();
         for (Seat seat : selectedSeats)
         {
             Ticket ticket = new Ticket(
-                    generateElectronicId(),
+                    generateElectronicId(electronicIds),
                     customer.getId(),
                     screening,
                     seat,
                     unitPrice,
                     LocalDateTime.now());
-            screening.getSeatMap().markAsSold(seat);
-            repository.saveTicket(ticket);
             tickets.add(ticket);
         }
         return tickets;
+    }
+
+    /** 生成当前购票记录中未使用的电子票号。 */
+    private String generateElectronicId(Set<String> electronicIds)
+    {
+        String electronicId;
+        do
+        {
+            electronicId = generateElectronicId();
+        }
+        while (repository.findTicket(electronicId) != null
+                || !electronicIds.add(electronicId));
+        return electronicId;
     }
 
     private String generateElectronicId()

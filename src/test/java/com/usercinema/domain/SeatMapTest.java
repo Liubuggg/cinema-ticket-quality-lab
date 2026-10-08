@@ -97,6 +97,21 @@ class SeatMapTest
     }
 
     @Test
+    void shouldNotSellAnySeatWhenOneSelectedSeatIsUnavailable()
+    {
+        SeatMap seatMap = new SeatMap();
+        Seat available = new Seat(1, 1);
+        Seat unavailable = new Seat(1, 2);
+        seatMap.reserve(unavailable);
+
+        assertThrows(IllegalStateException.class,
+                () -> seatMap.sellSeats(List.of(available, unavailable)));
+
+        assertEquals(SeatStatus.AVAILABLE, seatMap.getStatus(available));
+        assertEquals(SeatStatus.RESERVED, seatMap.getStatus(unavailable));
+    }
+
+    @Test
     void shouldRenderAvailableAndUnavailableSeatsInSnapshot()
     {
         SeatMap seatMap = new SeatMap();
